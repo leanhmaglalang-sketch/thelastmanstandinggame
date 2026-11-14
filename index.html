@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Last Man Standing - Buklod Night</title>
+  
+  <!-- Import Tone.js for Synthesized Sound Effects -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+  <!-- Import Montserrat font to match the design aesthetics -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+  
+  <style>
+    /* Global Styles for Presentation Feel */
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Montserrat', sans-serif;
+      overflow: hidden; /* Prevent scrolling entirely */
+      background-color: #050A1F;
+    }
+
+    .slide-container {
+      height: 100vh;
+      width: 100vw;
+      position: absolute;
+      top: 0;
+      left: 0;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease-in-out;
+      box-sizing: border-box;
+    }
+
+    .slide-container.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 0.5; }
+      50% { opacity: 1; }
+      100% { opacity: 0.5; }
+    }
+
+    /* Slide 5 Specific Styles */
+    .wheel-slide {
+      background: linear-gradient(135deg, #050A1F 0%, #0B132B 50%, #1A2A54 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 2vh 2vw; /* Use viewport height for padding to avoid overflow */
+    }
+    
+    .wheel-header {
+      text-align: center;
+      margin-bottom: 2vh;
+      z-index: 10;
+    }
+    
+    .wheel-title {
+      font-size: clamp(32px, 5vw, 48px);
+      font-weight: 900;
+      color: #FFFFFF;
+      margin: 0;
+      text-transform: uppercase;
+      text-shadow: 0px 4px 16px rgba(65, 105, 225, 0.8);
+    }
+    
+    .wheel-subtitle {
+      font-size: clamp(14px, 2.5vw, 20px);
+      font-weight: 700;
+      color: #C0C0C0;
+      margin: 1vh 0 0 0;
+      letter-spacing: 2px;
+    }
+    
+    .wheel-wrapper {
+      position: relative;
+      width: 60vmin; /* Responsive to smallest dimension of screen */
+      height: 60vmin;
+      max-width: 600px;
+      max-height: 600px;
+      aspect-ratio: 1 / 1;
+      margin: 0 auto;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .pointer-container {
+      position: absolute;
+      top: -3vmin;
+      z-index: 20;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      pointer-events: none;
+    }
+    
+    .pointer-body {
+      width: 0;
+      height: 0;
+      border-left: 2vmin solid transparent;
+      border-right: 2vmin solid transparent;
+      border-top: 5vmin solid #C0C0C0;
+      filter: drop-shadow(0px 6px 6px rgba(0,0,0,0.7));
+    }
+    
+    canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      box-shadow: 0 0 0 10px #C0C0C0, 0 0 30px 15px rgba(65, 105, 225, 0.4);
+      transform-origin: center center;
+    }
+    
+    .spin-btn {
+      margin-top: 4vh;
+      padding: 1.5vh 4vw;
+      font-size: clamp(16px, 3vw, 24px);
+      font-weight: 900;
+      font-family: 'Montserrat', sans-serif;
+      color: #FFFFFF;
+      background: linear-gradient(180deg, #4169E1 0%, #1A2A54 100%);
+      border: 2px solid #C0C0C0;
+      border-radius: 40px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.6), inset 0 2px 4px rgba(255,255,255,0.4);
+      transition: all 0.2s ease;
+      z-index: 10;
+    }
+    
+    .spin-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 12px 24px rgba(65, 105, 225, 0.6), inset 0 2px 4px rgba(255,255,255,0.6);
+    }
+    
+    .spin-btn:active {
+      transform: scale(0.95);
+    }
+    
+    .result-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(5, 10, 31, 0.95);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 50;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.5s ease;
+    }
+    
+    .result-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    
+    .result-title {
+      font-size: clamp(20px, 4vw, 32px);
+      font-weight: 700;
+      color: #C0C0C0;
+      margin-bottom: 24px;
+      letter-spacing: 4px;
+      text-align: center;
+    }
+    
+    .result-category {
+      font-size: clamp(32px, 6vw, 56px);
+      font-weight: 900;
+      color: #FFFFFF;
+      text-align: center;
+      text-transform: uppercase;
+      text-shadow: 0 0 20px #4169E1, 0 0 40px #4169E1, 0 0 60px #1A2A54;
+      max-width: 90%;
+      line-height: 1.2;
+    }
+    
+    .close-result-btn {
+      margin-top: 56px;
+      padding: 12px 32px;
+      font-size: 20px;
+      font-weight: 700;
+      font-family: 'Montserrat', sans-serif;
+      color: #050A1F;
+      background: #C0C0C0;
+      border: none;
+      border-radius: 30px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+      transition: background 0.2s;
+    }
+    
+    .close-result-btn:hover {
+      background: #FFFFFF;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Slide 4: Closing Slide (Dark Background) -->
+  <div class="slide-container active" id="slide4" style="background: linear-gradient(135deg, #050A1F 0%, #1A2A54 100%); display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px; cursor: pointer; z-index: 10;">
+    
+    <h2 contenteditable="true" style="font-size: clamp(40px, 8vw, 64px); font-weight: 900; color: #FFFFFF; margin: 0 0 24px 0; text-transform: uppercase; max-width: 900px;">
+      Let the game begin!
+    </h2>
+    
+    <div style="width: 120px; height: 4px; background: #4169E1; margin: 0 auto 32px auto;"></div>
+    
+    <p contenteditable="true" style="font-size: clamp(16px, 4vw, 24px); font-weight: 700; color: #C0C0C0; letter-spacing: 8px; margin: 0; text-transform: uppercase;">
+      BUKLOD NIGHT 2026
+    </p>
+
+    <p style="margin-top: 60px; font-size: 16px; color: #808080; animation: pulse 2s infinite; font-weight: 700; letter-spacing: 2px;">
+      [ CLICK ANYWHERE TO START ]
+    </p>
+    
+  </div>
+
+  <!-- Slide 5: The Spinning Wheel (Interactive) -->
+  <div class="slide-container wheel-slide" id="slide5" style="z-index: 5;">
+    <div class="wheel-header">
+      <h1 class="wheel-title">The Last Man Standing</h1>
+      <h2 class="wheel-subtitle">SPIN THE WHEEL – CATEGORY CHALLENGE!</h2>
+    </div>
+    
+    <div class="wheel-wrapper">
+      <div class="pointer-container">
+        <div class="pointer-body"></div>
+      </div>
+      <!-- Note: internal resolution is 480x480, visually scaled by CSS for responsiveness -->
+      <canvas id="wheelCanvas" width="480" height="480"></canvas>
+    </div>
+    
+    <button class="spin-btn" id="spinBtn">SPIN THE WHEEL!</button>
+
+    <div class="result-overlay" id="resultOverlay">
+      <div class="result-title">YOUR CATEGORY IS...</div>
+      <div class="result-category" id="resultCategoryText">CATEGORY NAME</div>
+      <button class="close-result-btn" id="closeResultBtn">CONTINUE</button>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // --- Audio Setup (Tone.js) ---
+      let tickSynth, winSynth;
+      let isAudioInit = false;
+
+      async function initAudio() {
+        if (!isAudioInit) {
+          await Tone.start(); // Required by browsers before playing sound
+          
+          // Synth for the ticking wheel peg sound
+          tickSynth = new Tone.MetalSynth({
+            frequency: 250,
+            envelope: { attack: 0.001, decay: 0.05, release: 0.01 },
+            harmonicity: 5.1,
+            modulationIndex: 32,
+            resonance: 4000,
+            octaves: 1.5
+          }).toDestination();
+          tickSynth.volume.value = -12; // Adjust volume so it isn't deafening
+
+          // Synth for the celebratory reveal sound
+          winSynth = new Tone.PolySynth(Tone.Synth, {
+            envelope: { attack: 0.02, decay: 0.1, sustain: 0.8, release: 1 }
+          }).toDestination();
+          winSynth.volume.value = -8;
+
+          isAudioInit = true;
+        }
+      }
+
+      // Presentation Slide Transition Logic
+      const slide4 = document.getElementById('slide4');
+      const slide5 = document.getElementById('slide5');
+
+      slide4.addEventListener('click', async (e) => {
+        // Prevent transition if someone is just trying to click and edit the text
+        if (e.target.hasAttribute('contenteditable')) return; 
+        
+        await initAudio(); // Initialize audio engine on the first user interaction
+        
+        slide4.classList.remove('active');
+        slide5.classList.add('active');
+      });
+
+      const canvas = document.getElementById('wheelCanvas');
+      const ctx = canvas.getContext('2d');
+      const spinBtn = document.getElementById('spinBtn');
+      const resultOverlay = document.getElementById('resultOverlay');
+      const resultCategoryText = document.getElementById('resultCategoryText');
+      const closeResultBtn = document.getElementById('closeResultBtn');
+
+      const centerX = canvas.width / 2;
+      const centerY = canvas.height / 2;
+      const radius = canvas.width / 2;
+
+      // Theme Colors mapping (Using let so we can modify them later)
+      let wheelColors = ["#4169E1", "#C0C0C0", "#1A2A54", "#808080", "#000033"];
+      let textColors = ["#FFFFFF", "#050A1F", "#FFFFFF", "#FFFFFF", "#C0C0C0"];
+
+      // Broken down for Canvas fitting
+      let categoriesText = [
+        ["TOURIST", "ATTRACTIONS"],
+        ["FAST FOOD CHAINS", "& RESTAURANTS"],
+        ["DATE NIGHT", "ACTIVITIES"],
+        ["GIFTS FOR", "YOUR SPOUSE"],
+        ["THINGS YOU CAN", "FIND AT HOME"]
+      ];
+
+      // Full Announcement Texts
+      let fullCategories = [
+        "TOURIST ATTRACTIONS",
+        "FAST FOOD CHAINS & RESTAURANTS",
+        "DATE NIGHT ACTIVITIES",
+        "GIFTS FOR YOUR SPOUSE",
+        "THINGS YOU CAN FIND AT HOME"
+      ];
+
+      let currentSelectedCategoryIndex = -1;
+
+      function drawWheel() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        const numSegments = fullCategories.length;
+        if (numSegments === 0) return; // Stop drawing if no categories are left
+        
+        const segmentAngle = (2 * Math.PI) / numSegments;
+
+        for (let i = 0; i < numSegments; i++) {
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          // Draw arc starting from top (-90 degrees) for proper alignment
+          ctx.arc(centerX, centerY, radius, i * segmentAngle - Math.PI/2 - segmentAngle/2, (i + 1) * segmentAngle - Math.PI/2 - segmentAngle/2);
+          ctx.fillStyle = wheelColors[i];
+          ctx.fill();
+          ctx.lineWidth = 4;
+          ctx.strokeStyle = '#808080';
+          ctx.stroke();
+
+          // Draw Text
+          ctx.save();
+          ctx.translate(centerX, centerY);
+          ctx.rotate(i * segmentAngle - Math.PI/2);
+          ctx.textAlign = "right";
+          ctx.textBaseline = "middle";
+          ctx.fillStyle = textColors[i];
+          ctx.font = "bold 18px 'Montserrat', sans-serif";
+          
+          const textRadius = radius - 25;
+          const lines = categoriesText[i];
+          if (lines.length === 1) {
+            ctx.fillText(lines[0], textRadius, 0);
+          } else {
+            ctx.fillText(lines[0], textRadius, -12);
+            ctx.fillText(lines[1], textRadius, 12);
+          }
+          ctx.restore();
+        }
+      }
+      
+      drawWheel();
+
+      let currentRotation = 0;
+      let isSpinning = false;
+
+      spinBtn.addEventListener('click', async () => {
+        if(isSpinning || fullCategories.length === 0) return;
+        
+        await initAudio(); // Ensure audio is ready just in case they skipped the first slide somehow
+
+        isSpinning = true;
+        spinBtn.innerText = "SPINNING...";
+        
+        const numSegments = fullCategories.length;
+        
+        // Ensure random selection from the remaining items
+        const targetIndex = Math.floor(Math.random() * numSegments);
+        currentSelectedCategoryIndex = targetIndex;
+        const sliceAngle = 360 / numSegments;
+        
+        // Calculate the rotation angle needed to place target slice perfectly at top center
+        const targetRotation = 360 - (targetIndex * sliceAngle);
+        
+        // Add random jitter to stop at different parts within the wedge (prevent landing exactly on a line)
+        const jitter = (Math.random() * 40) - 20; 
+        
+        // Rotate rapidly 7-10 times before slowing down to land
+        const spins = 7 + Math.floor(Math.random() * 4); 
+        
+        const totalRotation = currentRotation + (spins * 360) + targetRotation - (currentRotation % 360) + jitter;
+        currentRotation = totalRotation;
+        
+        // Apply spinning transition smoothly using CSS cubic-bezier
+        canvas.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.15, 1)';
+        canvas.style.transform = `rotate(${currentRotation}deg)`;
+        
+        // --- Ticking Sound Logic ---
+        const startTime = Date.now();
+        const spinDuration = 5000;
+        
+        function scheduleTick() {
+          if (!isSpinning) return; // Stop if interrupted
+          
+          const elapsed = Date.now() - startTime;
+          if (elapsed >= spinDuration) return; // Stop ticking when wheel finishes
+          
+          // Play the tick sound
+          if (tickSynth) {
+            tickSynth.triggerAttackRelease("32n");
+          }
+          
+          // Calculate the delay until the next tick. 
+          // Starts very fast (20ms) and exponentially slows down up to 800ms as it loses momentum
+          const progress = elapsed / spinDuration;
+          const nextDelay = 20 + (progress * progress * progress * 800); 
+          
+          setTimeout(scheduleTick, nextDelay);
+        }
+        
+        scheduleTick(); // Start the ticking sequence
+        // ---------------------------
+
+        // Display result modal when animation ends
+        setTimeout(() => {
+          isSpinning = false;
+          if (fullCategories.length > 1) {
+            spinBtn.innerText = "SPIN AGAIN!";
+          }
+          
+          // Play celebratory sound on reveal (C Major chord)
+          if (winSynth) {
+            const now = Tone.now();
+            winSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "2n", now);
+          }
+
+          resultCategoryText.innerText = fullCategories[targetIndex];
+          resultOverlay.classList.add('active');
+        }, 5200);
+      });
+
+      closeResultBtn.addEventListener('click', () => {
+        resultOverlay.classList.remove('active');
+        
+        // Remove the selected category entirely from the arrays
+        if (currentSelectedCategoryIndex > -1) {
+          categoriesText.splice(currentSelectedCategoryIndex, 1);
+          fullCategories.splice(currentSelectedCategoryIndex, 1);
+          wheelColors.splice(currentSelectedCategoryIndex, 1);
+          textColors.splice(currentSelectedCategoryIndex, 1);
+          currentSelectedCategoryIndex = -1;
+        }
+
+        // Reset canvas rotation instantly without transition so it doesn't spin backwards
+        canvas.style.transition = 'none';
+        canvas.style.transform = 'rotate(0deg)';
+        currentRotation = 0;
+
+        // Redraw with only the remaining categories
+        drawWheel();
+
+        // Update button text and disable if no categories are left
+        if (fullCategories.length === 0) {
+          spinBtn.innerText = "ALL CATEGORIES PLAYED";
+          spinBtn.style.opacity = "0.5";
+          spinBtn.style.cursor = "not-allowed";
+        }
+      });
+    });
+  </script>
+
+</body>
+</html>
